@@ -1,22 +1,22 @@
 /*
-  Recibe y procesa SMS basados en strings predefinidos
-  incluyendo una contraseña para tomar acciones de control,
-  registro y eliminación de usuarios.
-  Solo los 5 primeros contactos en el simcard
-  pueden agregar y eliminar usuarios.
-  Solo lo usuarios registrados en la "whitelist"
-  pueden tomar acciones de control.
-  Cualquier SMS distinto a los strings predefinidos
-  no serán tomados en cuenta por el sistema
+  receives and processes sms based on predefined strings,
+  including a password in order to take action control(change led or relay state),
+  registering and deleting users.
+  ONLY the first 5 numbers on sim will be able to
+  keep adding and deleting users.
+  ONLY the registered users in the "whitelist"
+  will be able to tale action control.
+  ANY sms DIFFERENT that the predefined strings
+  will be IGNORED by the system
 
+  Warning: when running this sketch, all the saved contacts on sim will be WIPED OUT!
 
-  NOTA!!! (al ejecutar este programa se borraran todos los contactos guardados previamente)
-  
-  formato del SMS:
-  KEY,4 números que se desean guardar,
-  por ejemplo el número 04168262668 envía el SMS KEY,7777,
-  en la posición 1 del sim se guarda la clave 7777
-  en la posición 2 el número 04168262668.
+  sms format:
+  KEY,4 numbers as password,
+  for example the number 04168262661 sends the sms KEY,7777,
+  on position 1 in sim is saved the key 7777
+  on position 2 in sim the 04168262661 is saved
+  from now only the number 04168262661 is able to add people using the 7777 password.
 
 
 */
@@ -60,27 +60,26 @@ char message[100];
 
 //**********************************************************
 
-//Valores de inicialización
+// initial setup
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
   Serial.println("Starting...");
   
-  // Comprueba conexión física con el SIM800L
+  //checking physical connection from NODEMCU to simn800l
   power_on(); 
   delay(3000);
   Serial.println("Connecting to the network...");
   
-  // Comprueba conexión con red celular
+  // checking cellular connection
   while ( (sendATcommand("AT+CREG?", "+CREG: 0,1", 5000, 0) ||
            sendATcommand("AT+CREG?", "+CREG: 0,5", 5000, 0)) == 0 );
 
-  // Configura lectura de SMS como caracteres ASCII
+  // configuring sms reading as ASCII characters
   sendATcommand("AT+CMGF=1", "OK", 5000, 0);
-  
-  // Configura lectura de SMS solo en el buffer serial
-  // y no guarda los SMS en la SIMcard
+
+  // configuring sms reading just in serial buffer NOT saving messages on simcard
   sendATcommand("AT+CNMI=1,2,0,0,0", "OK", 5000, 0);
   
 }
@@ -88,7 +87,7 @@ void setup() {
 
 //**********************************************************
 
-// Programa Principal
+// main program
 void loop()
 {
   CheckSIM800L();
@@ -96,7 +95,7 @@ void loop()
 
 //**********************************************************
 
-// Función que comprueba conexión física con el SIM800L
+// function that checks physical connection from NODEMCU to simn800l
 void power_on()
 {
   uint8_t answer = 0;
@@ -112,9 +111,9 @@ void power_on()
 
 //**********************************************************
 
-// Función que envía comandos AT al SIM800L
-// Cuando int xpassword tiene el valor de 0 no consulta contraseña
-// Cuando int xpassword tiene el valor de 1 consulta contraseña
+// function that sends AT commands to sim800l
+// when int xpassword has 0 it does not check password
+// when int xpassword has 1 it does check password
 
 int8_t sendATcommand(char* ATcommand, char* expected_answer, unsigned int timeout, int xpassword)
 {
@@ -164,14 +163,14 @@ int8_t sendATcommand(char* ATcommand, char* expected_answer, unsigned int timeou
 
 //**********************************************************
 
-// Función que lee el fin de linea en el puerto serial
+// function that reads end of line in serial port
 
 void endOfLineReached()
 
 {
   lastLine = String(currentLine);
 
-  // Comprueba que se está recibiendo una llamada
+  // checks that system is receiving a phone call
   if (lastLine.startsWith("RING"))
   {
     Serial.println(lastLine);
@@ -183,14 +182,16 @@ void endOfLineReached()
     {
       //LastLineIsCLIP();
     }
-  // Comprueba que se está recibiendo un SMS
+
+  // checks that system is receiving sms
     else if (lastLine.startsWith("+CMT:"))                         
     {
-      // Imprime SMS recibido completo
-    // Incluye el número que envía el mensaje
+
+    // prints full received sms
+    // includes sender number
     Serial.println(lastLine);
 
-    // Extrae número telefónico
+    // extracts phone number
       phonenum = lastLine.substring((lastLine.indexOf(34) + 1),
                                     lastLine.indexOf(34, lastLine.indexOf(34) + 1));
       nextLineIsMessage = true;
@@ -205,17 +206,18 @@ void endOfLineReached()
     }
     else if ((lastLine.length() > 0) && (nextLineIsMessage))
     {
-      // Procesa SMS
+      // processes sms
     LastLineIsCMT();
     }
   }
-  // Limpia buffer
+
+  // cleans buffer
   CleanCurrentLine();
 }
 
 //**********************************************************
 
-// Función que limpia línea
+// function that cleans line
 
 void CleanCurrentLine()
 
@@ -229,15 +231,16 @@ void CleanCurrentLine()
 
 //**********************************************************
 
-// Función que procesa el SMS
+// function that processes sms
 
 void LastLineIsCMT()
 {
-  // Solo el contenido del SMS
+  // only sms content
   Serial.println(lastLine);
   
-  //extrae la clave
-  // ejemplo de un SMS KEY,0007,
+  // extract password
+  // sms example having KEY,0007, as content
+
   firstComma        = lastLine.indexOf(',');
   secondComma       = lastLine.indexOf(',', (firstComma + 1));
   String key        = lastLine.substring((firstComma + 1), (secondComma));
@@ -245,14 +248,15 @@ void LastLineIsCMT()
 
   clearBuffer();
   
-    // SMS para ingresar clave
+    // sms to insert password
   if (lastLine.indexOf("KEY") >= 0)
     {
 		deleteAllContacts();
 		addContact("2",phonenum);
 		addContact("1",key);
 		trama = "";
-		trama = "Su numero ha sido registrado exitosamente y la clave principal es: " + key;
+		// trama = "Su numero ha sido registrado exitosamente y la clave principal es: " + key;
+	  trama = "phone number has been registered successfully and main password is: " + key;
 		tramaSMS(phonenum, trama);
     }
     else
@@ -265,7 +269,7 @@ void LastLineIsCMT()
 
 //**********************************************************
 
-// Función que limpia todo el buffer
+// function that cleans buffer
 
 void clearBuffer()
 {
@@ -284,23 +288,23 @@ void clearBuffer()
 
 //**********************************************************
 
-// Función que borrar todos los contactos del sim
+// function that wipes out all contacts in sim
 
 void deleteAllContacts()
 {
 
 	char aux_string[100];
-	// para simcard de 250 contactos
+  // for a simcard of 250 contacts
+  // change number if needed
 	for (i = 1; i < 251; i++)
 	{
 		indexAndName = "";
 		indexAndName = String(i);
 		tmpx = "";
 		tmpx = "AT+CPBW=" + indexAndName + "\r\n\"";
-		//Serial.println(tmpx);
 		tmpx.toCharArray( aux_string, 100 );
 		Serial.println(aux_string);
-		answer = sendATcommand(aux_string, "OK", 20000, 0); // envía comando AT
+		answer = sendATcommand(aux_string, "OK", 20000, 0); // sends At command
 		if (answer == 1)
 		{
 			Serial.println("Eliminado ");
@@ -314,8 +318,7 @@ void deleteAllContacts()
 
 //**********************************************************
 
-// Función que agrega número telefónico
-// en la posición pre-establecida en la variable position
+// function that adds phone number in predefined position in position variable
 
 void addContact(String position, String number)
 {
@@ -324,7 +327,7 @@ void addContact(String position, String number)
 	//Serial.println(tmpx);
 	tmpx.toCharArray( aux_string, 100 );
 	//Serial.println(aux_string);
-	answer = sendATcommand(aux_string, "OK", 20000, 0); // envía comando AT
+	answer = sendATcommand(aux_string, "OK", 20000, 0); // sends At command
 	if (answer == 1)
 	{
 		Serial.println("Agregado ");
@@ -337,24 +340,22 @@ void addContact(String position, String number)
 
 //**********************************************************
 
-// Función que arma trama de mensaje para enviar notificación
-// via SMS
+// functions that builds message to be later delivered as a sms
 
 void tramaSMS(String numbertoSend, String messagetoSend)
 {
-	// Copia número en array phone
+  // copies number in array phone
 	strcpy(phone,numbertoSend.c_str());
 
-	// Convierte trama en mensaje
+  // converts message in sms
 	strcpy(message, messagetoSend.c_str());
 
-	// Envía SMS de confirmación 
+  // sends sms confirmation
 	sendSMS(phone, message);
 }
 
 //**********************************************************
-
-// Funcion qne envia SMS
+// function that sends sms
 
 int sendSMS(char *phone_number, char *sms_text)
 {
@@ -390,8 +391,7 @@ int sendSMS(char *phone_number, char *sms_text)
 }
 
 //**********************************************************
-
-// Funcion qne chequea SIM800L
+// function that checks sim800l
 
 void CheckSIM800L()
 {
