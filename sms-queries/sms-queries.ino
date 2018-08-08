@@ -86,6 +86,18 @@ DHT dht(dht_dpin, DHTTYPE);
 #include <ESP8266HTTPClient.h>
 ESP8266WiFiMulti WiFiMulti;
 
+// NODEMCU PIN OUT
+// static const uint8_t D0   = 16;
+// static const uint8_t D1   = 5;
+// static const uint8_t D2   = 4;
+// static const uint8_t D3   = 0;
+// static const uint8_t D4   = 2;
+// static const uint8_t D5   = 14;
+// static const uint8_t D6   = 12;
+// static const uint8_t D7   = 13;
+// static const uint8_t D8   = 15;
+// static const uint8_t D9   = 3;
+// static const uint8_t D10  = 1;
 
 // initial setup
 
@@ -99,6 +111,10 @@ void setup() {
 
   // D2 as output. D2 is GPIO-4
   pinMode(4, OUTPUT);
+
+  // D4 as output. D2 is GPIO-2
+  pinMode(2, OUTPUT);
+
 
   Serial.begin(115200);
   Serial.println("Starting...");
@@ -349,40 +365,49 @@ void LastLineIsCMT()
 
   if (isIncontact)
   {
-    //SMS to turn LED ON
-	if (lastLine.indexOf("LED ON") >= 0)
+      //SMS to turn LED ON
+    if (lastLine.indexOf("LED ON") >= 0)
     {
-    // logica inversa
-    // inverse logic(negative logic)
-	  prendeapaga(0);
+      // logica inversa
+      // inverse logic(negative logic)
+      prendeapaga(0);
     }
 
-  // sms to turn LED OFF
+    // sms to turn LED OFF
     else if (lastLine.indexOf("LED OFF") >= 0)
     {
-
-    // inverse logic(negative logic)
+      // inverse logic(negative logic)
       prendeapaga(1);
     }
 
-  // sms to add user
+    else if (lastLine.indexOf("LED1 ON") >= 0)
+    {
+      // inverse logic(negative logic)
+      prendeapaga1(0);
+    }
+
+    else if (lastLine.indexOf("LED1 OFF") >= 0)
+    {
+      // inverse logic(negative logic)
+      prendeapaga1(1);
+    }
+      // sms to add user
     else if (lastLine.indexOf("ADD") >= 0)
     {
       DelAdd(1);
     }
 
-  // sms to delete user
+    // sms to delete user
     else if (lastLine.indexOf("DEL") >= 0)
     {
       DelAdd(2);
     }
-
     // sms to ask for temperature
     // only 5 first registered numbers on sim may ask for temperature
 
     else if (lastLine.indexOf("TEMP?") >= 0)
     {
-	    getTemperatureSMS();
+      getTemperatureSMS();
     }
     else if (lastLine.indexOf("HUMD?") >= 0)
     {
@@ -438,6 +463,58 @@ int  prendeapaga (int siono)
       
         // sends sms confirmation
         sendSMS(phone, "LED is OFF!");
+        break;
+      default:
+      break;
+    }
+  }
+  // cleans buffer
+  clearBuffer();
+}
+
+
+//**********************************************************
+
+// function that confirms password present in sms body
+// for second led
+
+int  prendeapaga1 (int siono)
+{
+  Serial.println("KKKKKKKKKKKKKKKKKKKKKKKKKKK");
+  Serial.println(lastLine);
+  firstComma    = lastLine.indexOf(',');
+  secondComma   = lastLine.indexOf(',', firstComma  + 1);
+  String InPassword = lastLine.substring((firstComma + 1), (secondComma));
+  Serial.println(InPassword);
+
+  if (InPassword == Password)
+  {
+
+    // nodemcu led with inverse logic (negative logic)
+    digitalWrite(LED_BUILTIN, siono);
+  // led connected in digital port D2-GPIO-4
+    switch (siono)
+    {
+      case 0:
+        // activates led with inverse logic (negative logic)
+        digitalWrite(2, LOW);
+
+        // copy number in array phone
+        phonenum.toCharArray(phone, 21);
+      
+        // sends sms confirmation
+        sendSMS(phone, "LED1 is ON!");
+        break;
+      case 1:
+
+        // deactivate led with inverse logic (negative logic)
+        digitalWrite(2, HIGH);
+      
+        // copy number in array phone
+        phonenum.toCharArray(phone, 21);
+      
+        // sends sms confirmation
+        sendSMS(phone, "LED2 is OFF!");
         break;
       default:
       break;
