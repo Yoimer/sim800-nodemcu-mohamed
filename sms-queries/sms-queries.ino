@@ -92,7 +92,13 @@ void setup() {
   
   // start dht11 sensor
   dht.begin();
-  
+
+  // built-in led as output
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // D2 as output. D2 is GPIO-4
+  pinMode(4, OUTPUT);
+
   Serial.begin(115200);
   Serial.println("Starting...");
 
@@ -148,7 +154,8 @@ float getHumidity() {
 
 //**********************************************************
 
-// Programa Principal
+
+// main program
 
 void loop()
 {
@@ -175,42 +182,9 @@ void loop()
       }
   }while((millis() - previous) < 5000);  // espera actividad en puerto serial for 5 segundos
 
-  // Mide temperatura
-  float temperature = getTemperature();
-  temperatureString = "";
-  temperatureString = String(getTemperature());
-  // imprime en consola el valor de temperatura
-  Serial.println(temperatureString);
-  
-  // envía SMS cuando la temperatura sobre pasa los umbrales
-  // cada 5 segundos a un número telefónico predefinido
-  if ((temperature >= 28.50) && (temperature < 31.50))
-  {
-	trama = "";
-	trama = "Alerta, la temperatura ha alcanzado el valor de: " + temperatureString + " grados Centigrados";
-	tramaSMS("04129501619", trama);
-  }
-  // apaga el equipo hasta que la temperatura alcance
-  // un valor por debajo de 31.50
-  // si se envía un SMS con el comando de encendido
-  // pero la temperatura es mayor a 31.50
-  // el comando no va a sobremandar el sistema
-  else if (temperature >= 31.50)
-  {
-	trama = "";
-	trama = "El equipo se ha apagado debido a que la temperatura alcanzo el valor de: " + temperatureString + " grados Centigrados";
-    // desactiva el relé con lógica inversa
-	digitalWrite(4, HIGH);
-	tramaSMS("04129501619", trama);
-  }
-  
-  // Conecta a internet para consultar o publicar resultados
-   //consulta en servidor web
-   GetInfoFromWeb(-1); 
-}
 //**********************************************************
 
-// Función que comprueba conexión física con el SIM800L
+// function that checks physical connection from NODEMCU to sim800l
 void power_on()
 {
   uint8_t answer = 0;
@@ -226,11 +200,9 @@ void power_on()
 
 //**********************************************************
 
-// Función que envía comandos AT al SIM800L
-// Cuando int xpassword tiene el valor de 0 no consulta contraseña
-// Cuando int xpassword tiene el valor de 1 consulta contraseña
-// la contraseña consiste en los cuatro primeros números
-// guardados en la posición 1 del sim
+// function that sends AT commands to sim800l
+// when int xpassword has 0 it does not check password
+// when int xpassword has 1 it does check password
 
 int8_t sendATcommand(char* ATcommand, char* expected_answer, unsigned int timeout, int xpassword)
 {
@@ -280,14 +252,13 @@ int8_t sendATcommand(char* ATcommand, char* expected_answer, unsigned int timeou
 
 //**********************************************************
 
-// Función que lee el fin de linea en el puerto serial
-
+// function that reads end of line in serial port
 void endOfLineReached()
 
 {
   lastLine = String(currentLine);
 
-  // Comprueba que se está recibiendo una llamada
+    // checks that system is receiving a phone call
   if (lastLine.startsWith("RING"))
   {
     Serial.println(lastLine);
@@ -297,35 +268,17 @@ void endOfLineReached()
   {
     if ((lastLine.length() > 0) && (nextValidLineIsCall))
     {
+      // process call
       LastLineIsCLIP();
     }
-	// Comprueba que se está recibiendo un SMS
+
+    // checks that system is receiving sms
     else if (lastLine.startsWith("+CMT:"))
     {
-	  //Ejemplo de SMS cuando el número no está registrado
-	  // +CMT: "04168262667","","17/05/24,12:15:34-16"
-	  
-	  //Ejemplo de SMS cuando el número está registrado
-	  // y el nombre de contancto asignado es "1"
-	  // +CMT: "04168262667","1","17/05/24,12:15:34-16"
-	  
-	  // Los formatos de recepción dependen de la operadora
-	  // telefónica.
-	  // En algunos casos pueden incluir el códido internacional
-	  // del país tal como se muestra a continuación:
-	  
-	  //Ejemplo de SMS cuando el número no está registrado
-	  //+CMT: "+584168262667","","17/05/24,12:15:34-16"
-	  
-	  //Ejemplo de SMS cuando el número está registrado
-	  //y el nombre de contancto asignado es "1"
-	  //+CMT: "+584168262667","1","17/05/24,12:15:34-16"
-	  
-	  // Imprime SMS recibido completo
-	  // Incluye el número que envía el mensaje
+
 	  Serial.println(lastLine);
 
-	  // Extrae número telefónico
+    // extracts phone number   
       phonenum = lastLine.substring((lastLine.indexOf(34) + 1),
                                     lastLine.indexOf(34, lastLine.indexOf(34) + 1));
       nextLineIsMessage = true;
@@ -342,14 +295,14 @@ void endOfLineReached()
       isIncontact  = false;
       isAuthorized = false;
 	  
-	  // Confirma registro y autorización
+    // validates register and authorization
       if (j > 0)
       {
         isIncontact = true;
-        Serial.println("en phonebook");
+        Serial.println("in phonebook");
         if (j <= 5 )
         {
-          Serial.println("autorizada");
+          Serial.println("authorized");
           isAuthorized = true;
         }
       }
@@ -359,18 +312,17 @@ void endOfLineReached()
     }
     else if ((lastLine.length() > 0) && (nextLineIsMessage))
     {
-      // Procesa SMS
+    // processes sms
 	  LastLineIsCMT();
     }
   }
-  // Limpia buffer
+  // cleans buffer
   CleanCurrentLine();
 }
 
 //**********************************************************
 
-// Función que limpia línea
-
+// function that cleans line
 void CleanCurrentLine()
 
 {
@@ -383,44 +335,53 @@ void CleanCurrentLine()
 
 //**********************************************************
 
-// Función que procesa el SMS
+// function that processes sms
 
 void LastLineIsCMT()
 {
-  // Solo el contenido del SMS
+
+  // only sms content
   Serial.println(lastLine);
-  
+
+  // cleans buffer
   clearBuffer();
+
   if (isIncontact)
   {
-    // SMS para encender equipo
+    //SMS to turn LED ON
 	if (lastLine.indexOf("LED ON") >= 0)
     {
-      // logica inversa
+    // logica inversa
+    // inverse logic(negative logic)
 	  prendeapaga(0);
     }
-	// SMS para apagar equipo
+
+  // sms to turn LED OFF
     else if (lastLine.indexOf("LED OFF") >= 0)
     {
-	  // logica inversa
+
+    // inverse logic(negative logic)
       prendeapaga(1);
     }
-	// SMS para registrar usuario
+
+  // sms to add user
     else if (lastLine.indexOf("ADD") >= 0)
     {
       DelAdd(1);
     }
-	// SMS para eliminar usuario
+
+  // sms to delete user
     else if (lastLine.indexOf("DEL") >= 0)
     {
       DelAdd(2);
     }
-	// SMS para consultar temperatura
-	// solo los 5 primeros números registrados pueden
-	// leer temperatura
+
+    // sms to ask for temperature
+    // only 5 first registered numbers on sim may ask for temperature
+
     else if (lastLine.indexOf("TEMP?") >= 0)
     {
-	  getTemperatureSMS();
+	    getTemperatureSMS();
     }
     else
     {
@@ -433,7 +394,7 @@ void LastLineIsCMT()
 
 //**********************************************************
 
-// Función que confirma contraseña presente en el SMS
+// function that confirms password present in sms body
 
 int  prendeapaga (int siono)
 {
@@ -446,43 +407,44 @@ int  prendeapaga (int siono)
 
   if (InPassword == Password)
   {
-    // LED en NODEMCU con lógica inversa
-    digitalWrite(LED_BUILTIN, siono);
-	
-	// Relé conectado en puerto digital D2-GPIO-4
-	switch (siono) {
-		case 0:
-			// Activa el relé con lógica inversa
-			digitalWrite(4, LOW);
-	  
-			// Copia número en array phone
-			phonenum.toCharArray(phone, 21);
-	  
-			// Envía SMS de confirmación 
-			sendSMS(phone, "Rele activado!");
-			break;
-		case 1:
-			// desactiva el relé con lógica inversa
-			digitalWrite(4, HIGH);
-	  
-			// Copia número en array phone
-			phonenum.toCharArray(phone, 21);
-	  
-			// Envía SMS de confirmación 
-			sendSMS(phone, "Rele desactivado!");
-			break;
-		default:
-		break;
-}
 
+    // nodemcu led with inverse logic (negative logic)
+    digitalWrite(LED_BUILTIN, siono);
+  // led connected in digital port D2-GPIO-4
+    switch (siono)
+    {
+      case 0:
+        // activates led with inverse logic (negative logic)
+        digitalWrite(4, LOW);
+
+        // copy number in array phone
+        phonenum.toCharArray(phone, 21);
+      
+        // sends sms confirmation
+        sendSMS(phone, "LED is ON!");
+        break;
+      case 1:
+
+        // deactivate led with inverse logic (negative logic)
+        digitalWrite(4, HIGH);
+      
+        // copy number in array phone
+        phonenum.toCharArray(phone, 21);
+      
+        // sends sms confirmation
+        sendSMS(phone, "LED is OFF!");
+        break;
+      default:
+      break;
+    }
   }
+  // cleans buffer
   clearBuffer();
 }
 
 //**********************************************************
 
-// Función que limpia todo el buffer
-
+// function that cleans buffer
 void clearBuffer()
 {
   byte w = 0;
@@ -747,22 +709,27 @@ void tramaSMS(String numbertoSend, String messagetoSend)
 
 //**********************************************************
 
-// Función que obtiene temperatura del sensor DS18B20
-// y envía SMS
+// function that gets temperature from DHT11 and sends sms
 
 void getTemperatureSMS()
 {   
-    // confirma que está entre los 5 primeros usuarios del sim
+    // checks if number is whithin 5 first positions in sim
 	if (!isAuthorized)
     {
 		Serial.println(j);
-		Serial.println("No autorizado para consultar temperatura");
+		// Serial.println("No autorizado para consultar temperatura");
+    Serial.println("No authorized to check temperature");
     }
 	else
 	{
-		
-		trama = "";
-		trama = "El valor de temperatura es: " + temperatureString + " grados Celsius";
+		// measure temperature
+    float temperature = getTemperature();
+    temperatureString = "";
+    temperatureString = String(getTemperature());
+    // prints temperature in console
+    // Serial.println(temperatureString);
+    trama = "";
+    trama = "Temperature value is: " + temperatureString + " Celsius degrees";
 		tramaSMS(phonenum, trama);
 	}
 }
