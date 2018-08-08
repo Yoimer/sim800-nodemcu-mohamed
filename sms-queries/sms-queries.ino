@@ -286,7 +286,7 @@ void endOfLineReached()
     if ((lastLine.length() > 0) && (nextValidLineIsCall))
     {
       // process call
-      LastLineIsCLIP();
+      //LastLineIsCLIP();
     }
 
     // checks that system is receiving sms
@@ -542,73 +542,9 @@ void clearBuffer()
   }
 }
 
-
 //**********************************************************
 
-// Función que procesa llamada telefónica
-
-void LastLineIsCLIP()
-{
-  firstComma         = lastLine.indexOf(',');
-  secondComma        = lastLine.indexOf(',', firstComma + 1);
-  thirdComma         = lastLine.indexOf(',', secondComma + 1);
-  forthComma         = lastLine.indexOf(',', thirdComma + 1);
-  fifthComma         = lastLine.indexOf(',', forthComma + 1);
-  PhoneCalling       = lastLine.substring((firstComma - 12), (firstComma - 1));
-  PhoneCallingIndex  = lastLine.substring((forthComma + 2), (fifthComma - 1));
-  j                  = PhoneCallingIndex.toInt();
-  if (PhoneCalling == OldPhoneCalling)
-  {
-    swveces = 1;
-    if ((millis() - xprevious ) > 9000)
-    {
-      swveces   = 0;
-      xprevious = millis();
-    };
-  }
-  else
-  {
-    xprevious       = millis();
-    OldPhoneCalling = PhoneCalling;
-    swveces         = 0;
-  }
-  if (j > 0 & swveces == 0)
-  {
-    digitalWrite(LED_BUILTIN, HIGH);
-	// desactiva el relé con lógica inversa
-	digitalWrite(4, HIGH);
-  }
-  if ((WiFiMulti.run() == WL_CONNECTED) & swveces == 0)
-  {
-    HTTPClient http;
-    String xp = "http://estredoyaqueclub.com.ve/arduinoenviacorreo.php?telefono=" + PhoneCalling + "-" + PhoneCallingIndex;
-    http.begin(xp);
-    int httpCode = http.GET();
-    if (httpCode > 0)
-    {
-      if (httpCode == HTTP_CODE_OK)
-      {
-        String BuildStringx = http.getString();
-        Serial.println("[+++++++++++++++++++");
-        Serial.println(BuildStringx);
-        Serial.println("[+++++++++++++++++++");
-      }
-    }
-    else
-    {
-      Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-    }
-    http.end();
-  }
-  clearBuffer();
-  nextValidLineIsCall = false;
-}
-
-
-
-//**********************************************************
-
-// Función que Registra y Borra usuario
+// function that register and delete users
 
 int DelAdd(int DelOrAdd)
 {
@@ -621,7 +557,7 @@ int DelAdd(int DelOrAdd)
   newContact = "";
   newContact   = lastLine.substring((secondComma + 1), thirdComma);
   
-  // confirma que está entre los 5 primeros usuarios del sim
+  // if registered on sim
   if (!isAuthorized)
   {
     Serial.println(j);
@@ -629,23 +565,19 @@ int DelAdd(int DelOrAdd)
     return 0;
   }
   
-  // Limpia variable temporal
+  // cleans tmpx
   tmpx = "";
   
   // Comando AT para agregar y borrar usuarios en el SIM
+  // at commands for adding and deleting
+
+    // add
+    //AT+CPBW=sim position,"number to be saved",129,"contact name"
+    //AT+CPBW=1,"04168262665",129,"1"
   
-  //Agregar
-  // AT+CPBW=posicion en sim,"numero a guadar",129,"nombre de contacto"
-  // 129 significa que el numero a guardar es nacional
-  // sin incluir el formato telefónico internacional ejemplo +58
-  // AT+CPBW=1,"04168262667",129,"1" guarda ese número en la
-  // posición 1 del sim y el nombre asignado es un ID de valor 1.
-  // cada ID está asignado en la base de datos con el nombre
-  // del usuario correspondiente
-  
-  //Borrar
-  // AT+CPBW=posicion en sim
-  // AT+CPBW=30 borraría posición 30 en el sim
+  // delete
+  // AT+CPBW=posicion on sim
+  // AT+CPBW=30 // would delete number in position 30
 
   tmpx = "AT+CPBW=" + indexAndName + "\r\n\"";
   if ( DelOrAdd == 1 )
@@ -658,9 +590,7 @@ int DelAdd(int DelOrAdd)
   if (answer == 1)
   {
     Serial.println("Sent ");
-	// llamar a confirmSMS() para decir que se registró
-	// o se eliminó con éxito
-	confirmSMS(DelOrAdd);
+	  confirmSMS(DelOrAdd);
   }
   else
   {
@@ -676,7 +606,7 @@ int DelAdd(int DelOrAdd)
 	{
 		SMSerror = 2;
 	}
-	Serial.println("Va a rutina de error");
+	Serial.println("Go to error routine");
 	// llamar a confirmSMS() para decir que tipo de error hubo
 	confirmSMS(3);
   }
@@ -686,7 +616,7 @@ int DelAdd(int DelOrAdd)
 
 //**********************************************************
 
-// Función que envía SMS 
+// function than send sms
 
 int sendSMS(char *phone_number, char *sms_text)
 {
@@ -723,45 +653,47 @@ int sendSMS(char *phone_number, char *sms_text)
 
 //**********************************************************
 
-// Función que confirma registro,eliminación
-// o error vía SMS 
+// function that confirms registration, deleting
+// and errorv via sms
 
 void confirmSMS(int DelOrAdd )
 {
 	switch (DelOrAdd) {
-		// Confirma registro exitoso
+
+    // registering confirmation
 		case 1:
 			trama = "";
-			trama = "El numero: " + newContact + " ha sido registrado con exito en la posicion: " + indexAndName;
-			tramaSMS(phonenum, trama); // Envía SMS de confirmación 
+      trama = "Number: " + newContact + " has been registered successfully: " + indexAndName;
+
+			tramaSMS(phonenum, trama); // SMS confirmation
 
 			trama = "";
-			trama = "Bienvenid@. Su numero fue registrado exitosamente.";
-			tramaSMS(newContact, trama); // Envía SMS de confirmación 
+      trama = "Welcome. Your number has been registered successfully"
+			tramaSMS(newContact, trama); //SMS confirmation
 			break;
-		// Confirma eliminación exitosa
+
+    // successfully deleting
 		case 2:
 			trama = "";
-			trama = "El numero registrado en la posicion: " + indexAndName + " ha sido eliminado exitosamente ";
-			tramaSMS(phonenum, trama); // Envía SMS de confirmación 
+			trama = "Number registered in position: " + indexAndName + " has been changed successfully";
+			tramaSMS(phonenum, trama); // SMS confirmation
 			break;
-		// Reporta error
+    // error report
 		case 3:
 			Serial.println("On case 3 ");
 			Serial.println("Value of DelOrAdd: ");
 			Serial.println(DelOrAdd);
 			switch (SMSerror) {
-				// Error de registro
 				case 1:
 					trama = "";
-					trama = "No se pudo registrar el numero. Revise el formato del mensaje por favor";
-					tramaSMS(phonenum, trama); // Envía SMS de confirmación 
+          trama = "Number could not be registered. Check message format please"
+					tramaSMS(phonenum, trama); // SMS confirmation
 					break;
-				// Error de eliminación
+				// deleting error
 				case 2:
 					trama = "";
-					trama = "No se pudo eliminar el numero. Revise el formato del mensaje por favor";
-					tramaSMS(phonenum, trama); // Envía SMS de confirmación 
+          trama = "Number could not be deleted. Check message format please"
+					tramaSMS(phonenum, trama); // SMS confirmation
 					break;
 				default:
 				break;
@@ -774,18 +706,17 @@ void confirmSMS(int DelOrAdd )
 
 //**********************************************************
 
-// Función que arma trama de mensaje para enviar notificación
-// via SMS
+// build string to be delivered as a sms
 
 void tramaSMS(String numbertoSend, String messagetoSend)
 {
-	// Copia número en array phone
+  // copy number in arrays
 	strcpy(phone,numbertoSend.c_str());
 
-	// Convierte trama en mensaje
+  // trama into message
 	strcpy(message, messagetoSend.c_str());
 
-	// Envía SMS de confirmación 
+	// sms confirmation
 	sendSMS(phone, message);
 }
 
@@ -840,176 +771,4 @@ void getHumiditySMS()
     trama = "Humidity value is: " + humidityString + " Percentage";
 		tramaSMS(phonenum, trama);
 	}
-}
-
-
-//**********************************************************
-
-// Función que se comunica con servidor web y
-// verifica comandos de control y registro
-
-int GetInfoFromWeb (int router)
-{
-//delay(10000);
-delay(5000);
-String xp;
-if((WiFiMulti.run() == WL_CONNECTED) ) 
-  {  
-	Serial.println("[++++++GetInfoFromWeb+++++++");
-
-  // Servidor web local virtual
-  // Debe ser uno real conectado a internet
-  //xp = "http://192.168.0.164/sandbox/whitelist.txt";
-  //xp = "http://192.168.5.107/sandbox/whitelist.txt";
-  //xp = "http://98cc57cb.ngrok.io/sandbox/whitelist.txt";
-  xp = "http://192.168.5.102/sandbox/whitelist.txt";
-  Serial.println(xp);
-  HTTPClient http;
-  http.begin(xp);
-  int httpCode = http.GET();
-  if(httpCode > 0)
-  {
-  if(httpCode == HTTP_CODE_OK) 
-    {
-		BuildString = http.getString();
-		Serial.println(BuildString);
-
-		// String que viene desde el servidor a modo de espera
-		// +9999#99999999999$SMS*AA/position/
-   
-		// String que viene desde el servidor para tomar acción
-		//+9999#99999999999$SMS*2/35/
-		//9999                -> ID en base de datos
-		//99999999999         -> Celular de 11 dígitos que recibe el mensaje o que va a ser agregado o eliminado del sistema
-		//SMS                 -> Contenido del mensaje
-		//2                   -> Acción que se toma en el sistema
-        //35                  -> Posición en el SIM
-
-		
-		//0                   -> Activa Relé por lógica inversa
-		//1                   -> Desactiva Relé por lógica inversa
-		//2                   -> Agrega número en el SIM
-		//3                   -> Borra número en el SIM
-		//cada acción debe documentarse acá
-		
-		char msgx[1024];
-		char telx[1024];
-
-		// Extrae ID de la base de datos
-		id             = BuildString.substring(BuildString.indexOf("+")+1,BuildString.indexOf("#"));
-
-		// Extrae número telefónico que recibirá el SMS o número que va a ser agregado o eliminado del sistema
-		String tel     = BuildString.substring(BuildString.indexOf("#")+1,BuildString.indexOf("$"));
-		
-		// Extrae SMS
-		String msg     = BuildString.substring(BuildString.indexOf("$")+1,BuildString.indexOf("*"));
-		
-		// Extrae acción a tomar en el sistema
-		String action  = BuildString.substring(BuildString.indexOf("*")+1,BuildString.indexOf("/"));
-		
-		// Extrae position del SIM que será agregada o eliminada del sitema
-		String add_del     = BuildString.substring((BuildString.indexOf("/") + 1), BuildString.indexOf("/", BuildString.indexOf("/") + 1));
-
-		Serial.println("id :"+id);
-		Serial.println("tel:"+tel);
-		Serial.println("msg:"+msg);
-		Serial.println("action:"+action);
-		Serial.println("add_del:"+add_del);
-		
-		//Formato de mensaje presente en el servidor
-		//+9999#99999999999$SMS*AA/
-		if ( action != "AA")
-		{
-			strcpy(telx, tel.c_str());
-			strcpy(msgx, msg.c_str());
-			int control = action.toInt();
-			Serial.println(control);
-			// control de relé desde internet
-			// Relé conectado en puerto digital D2-GPIO-4
-			switch (control)
-			{
-				// Activa el relé con lógica inversa 
-				case 0:
-					Serial.println("Case 0");
-					//LED en NODEMCU con lógica inversa
-					digitalWrite(LED_BUILTIN, router);
-					digitalWrite(4, LOW);
-					break;
-				// Desactiva el relé con lógica inversa
-				case 1:
-					Serial.println("Case 1");
-					//LED en NODEMCU con lógica inversa
-					digitalWrite(LED_BUILTIN, router);
-					digitalWrite(4, HIGH);
-					break;
-				// Agrega número en SIM
-				case 2:
-					Serial.println("Case 2");
-					
-					// Limpia variable temporal
-					tmpx = "";
-
-					// Limpia indexAndName
-					indexAndName = "";
-					
-					// Limpia newContact
-					newContact = "";
-
-					// Asigna posición del sim que se va a incorporar en el sistema
-					indexAndName = add_del;
-
-					// Asigna número telefónico que se va a incorporar en el sistema
-					newContact = tel;
-
-					// Guarda número en SIM
-					tmpx = "AT+CPBW=" + indexAndName + ",\"" + newContact + "\"" + ",129," + "\"" + indexAndName + "\"" + "\r\n\"";
-					tmpx.toCharArray( aux_string, 100 );
-					answer = sendATcommand(aux_string, "OK", 20000, 0);
-					if (answer == 1)
-					{
-						Serial.println("Agregado en el sistema ");
-					}
-					else
-					{
-						Serial.println("Error, verifique formato del string ");
-					}
-					break;
-				// Borra número en SIM
-				case 3:
-					Serial.println("Case 3");
-
-					// Limpia variable temporal
-					tmpx = "";
-
-					// Limpia indexAndName
-					indexAndName = "";
-
-					// Asigna posición del sim que se va a borrar
-					indexAndName = add_del;
-					
-					tmpx = "AT+CPBW=" + indexAndName + "\r\n\"";
-					tmpx.toCharArray( aux_string, 100 );
-					answer = sendATcommand(aux_string, "OK", 20000, 0);
-					if (answer == 1)
-					{
-						Serial.println("Borrado del sistema");
-					}
-					else
-					{
-						Serial.println("Error, verifique formato del string ");
-					}
-					break;
-				default:
-				break;
-			}
-			sendSMS  (telx,msgx) ;
-		}
-    }
-  } 
-  else 
-  {
-	Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-  }
-	http.end();
-  }   
 }
