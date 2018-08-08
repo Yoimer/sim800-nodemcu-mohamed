@@ -514,7 +514,7 @@ int  prendeapaga1 (int siono)
         phonenum.toCharArray(phone, 21);
       
         // sends sms confirmation
-        sendSMS(phone, "LED2 is OFF!");
+        sendSMS(phone, "LED1 is OFF!");
         break;
       default:
       break;
