@@ -181,7 +181,7 @@ void loop()
 		}
       }
   }while((millis() - previous) < 5000);  // espera actividad en puerto serial for 5 segundos
-
+}
 //**********************************************************
 
 // function that checks physical connection from NODEMCU to sim800l
