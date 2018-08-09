@@ -408,7 +408,7 @@ void LastLineIsCMT()
     }
   } 
   // any registered can ask for temperature and humidity
-  else if (isIncontact) 
+  if (isIncontact) 
   {
     if (lastLine.indexOf("TEMP?") >= 0) 
     {
