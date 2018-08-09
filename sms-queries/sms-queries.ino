@@ -363,12 +363,12 @@ void LastLineIsCMT()
   // cleans buffer
   clearBuffer();
 
-  if (isIncontact)
+  // just from position 1 to 5 in sim
+  if (isAuthorized)
   {
       //SMS to turn LED ON
     if (lastLine.indexOf("LED ON") >= 0)
     {
-      // logica inversa
       // inverse logic(negative logic)
       prendeapaga(0);
     }
@@ -402,10 +402,15 @@ void LastLineIsCMT()
     {
       DelAdd(2);
     }
-    // sms to ask for temperature
-    // only 5 first registered numbers on sim may ask for temperature
-
-    else if (lastLine.indexOf("TEMP?") >= 0)
+    else
+    {
+      clearBuffer();
+    }
+  } 
+  // any registered can ask for temperature and humidity
+  else if (isIncontact) 
+  {
+    if (lastLine.indexOf("TEMP?") >= 0) 
     {
       getTemperatureSMS();
     }
@@ -413,11 +418,12 @@ void LastLineIsCMT()
     {
       getHumiditySMS();
     }
-    else
+    else 
     {
       clearBuffer();
     }
   }
+
   CleanCurrentLine();
   nextLineIsMessage = false;
 }
