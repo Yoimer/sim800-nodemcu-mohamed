@@ -1,3 +1,4 @@
+
 /* receives and processes sms based on predefined strings,
   including a password in order to take action control(change led or relay state),
   registering and deleting users.
@@ -118,8 +119,7 @@ void setup() {
 
   Serial.begin(115200);
   Serial.println("Starting...");
-
-  //checking physical connection from NODEMCU to simn800l
+//checking physical connection from NODEMCU to simn800l
   power_on(); 
   delay(3000);
   Serial.println("Connecting to the network...");
@@ -181,21 +181,21 @@ void loop()
 
   do
   {
-	  // Si hay salida serial desde el SIM800
-	  if (Serial.available() > 0)
-	  {
-		char lastCharRead = Serial.read();
-		
-		// Lee cada caracter desde la salida serial hasta que \r o \n is encontrado (lo cual denota un fin de línea)
-		if (lastCharRead == '\r' || lastCharRead == '\n')
-		{
-		  endOfLineReached();
-		}
+    // Si hay salida serial desde el SIM800
+    if (Serial.available() > 0)
+    {
+    char lastCharRead = Serial.read();
+    
+    // Lee cada caracter desde la salida serial hasta que \r o \n is encontrado (lo cual denota un fin de línea)
+    if (lastCharRead == '\r' || lastCharRead == '\n')
+    {
+      endOfLineReached();
+    }
 
-		else
-		{
-		  currentLine[currentLineIndex++] = lastCharRead;
-		}
+    else
+    {
+      currentLine[currentLineIndex++] = lastCharRead;
+    }
       }
   }while((millis() - previous) < 5000);  // espera actividad en puerto serial for 5 segundos
 }
@@ -274,8 +274,7 @@ void endOfLineReached()
 
 {
   lastLine = String(currentLine);
-
-    // checks that system is receiving a phone call
+// checks that system is receiving a phone call
   if (lastLine.startsWith("RING"))
   {
     Serial.println(lastLine);
@@ -293,7 +292,7 @@ void endOfLineReached()
     else if (lastLine.startsWith("+CMT:"))
     {
 
-	  Serial.println(lastLine);
+    Serial.println(lastLine);
 
     // extracts phone number   
       phonenum = lastLine.substring((lastLine.indexOf(34) + 1),
@@ -311,7 +310,7 @@ void endOfLineReached()
       j            = PhoneCallingIndex.toInt();
       isIncontact  = false;
       isAuthorized = false;
-	  
+    
     // validates register and authorization
       if (j > 0)
       {
@@ -330,7 +329,7 @@ void endOfLineReached()
     else if ((lastLine.length() > 0) && (nextLineIsMessage))
     {
     // processes sms
-	  LastLineIsCMT();
+    LastLineIsCMT();
     }
   }
   // cleans buffer
@@ -402,13 +401,21 @@ void LastLineIsCMT()
     {
       DelAdd(2);
     }
+    else if (lastLine.indexOf("TEMP?") >= 0) 
+    {
+      getTemperatureSMS();
+    }
+    else if (lastLine.indexOf("HUMD?") >= 0)
+    {
+      getHumiditySMS();
+    }
     else
     {
       clearBuffer();
     }
   } 
   // any registered can ask for temperature and humidity
-  if (isIncontact) 
+  else if (isIncontact) 
   {
     if (lastLine.indexOf("TEMP?") >= 0) 
     {
@@ -443,8 +450,7 @@ int  prendeapaga (int siono)
 
   if (InPassword == Password)
   {
-
-    // nodemcu led with inverse logic (negative logic)
+// nodemcu led with inverse logic (negative logic)
     digitalWrite(LED_BUILTIN, siono);
   // led connected in digital port D2-GPIO-4
     switch (siono)
@@ -584,8 +590,7 @@ int DelAdd(int DelOrAdd)
   // delete
   // AT+CPBW=posicion on sim
   // AT+CPBW=30 // would delete number in position 30
-
-  tmpx = "AT+CPBW=" + indexAndName + "\r\n\"";
+tmpx = "AT+CPBW=" + indexAndName + "\r\n\"";
   if ( DelOrAdd == 1 )
   {
     tmpx = "AT+CPBW=" + indexAndName + ",\"" + newContact + "\"" + ",129," + "\"" + indexAndName + "\"" + "\r\n\"";
@@ -596,25 +601,25 @@ int DelAdd(int DelOrAdd)
   if (answer == 1)
   {
     Serial.println("Sent ");
-	  confirmSMS(DelOrAdd);
+    confirmSMS(DelOrAdd);
   }
   else
   {
     Serial.println("error ");
-	
-	// Error de registro
-	if (DelOrAdd == 1)
-	{
-		SMSerror = 1;
-	}
-	// Error de eliminación
+  
+  // Error de registro
+  if (DelOrAdd == 1)
+  {
+    SMSerror = 1;
+  }
+  // Error de eliminación
     else if (DelOrAdd == 2)
-	{
-		SMSerror = 2;
-	}
-	Serial.println("Go to error routine");
-	// llamar a confirmSMS() para decir que tipo de error hubo
-	confirmSMS(3);
+  {
+    SMSerror = 2;
+  }
+  Serial.println("Go to error routine");
+  // llamar a confirmSMS() para decir que tipo de error hubo
+  confirmSMS(3);
   }
   clearBuffer();
 }
@@ -664,50 +669,50 @@ int sendSMS(char *phone_number, char *sms_text)
 
 void confirmSMS(int DelOrAdd )
 {
-	switch (DelOrAdd) {
+  switch (DelOrAdd) {
 
     // registering confirmation
-		case 1:
-			trama = "";
+    case 1:
+      trama = "";
       trama = "Number: " + newContact + " has been registered successfully: " + indexAndName;
 
-			tramaSMS(phonenum, trama); // SMS confirmation
+      tramaSMS(phonenum, trama); // SMS confirmation
 
-			trama = "";
+      trama = "";
       trama = "Welcome. Your number has been registered successfully";
-			tramaSMS(newContact, trama); //SMS confirmation
-			break;
+      tramaSMS(newContact, trama); //SMS confirmation
+      break;
 
     // successfully deleting
-		case 2:
-			trama = "";
-			trama = "Number registered in position: " + indexAndName + " has been changed successfully";
-			tramaSMS(phonenum, trama); // SMS confirmation
-			break;
+    case 2:
+      trama = "";
+      trama = "Number registered in position: " + indexAndName + " has been changed successfully";
+      tramaSMS(phonenum, trama); // SMS confirmation
+      break;
     // error report
-		case 3:
-			Serial.println("On case 3 ");
-			Serial.println("Value of DelOrAdd: ");
-			Serial.println(DelOrAdd);
-			switch (SMSerror) {
-				case 1:
-					trama = "";
+    case 3:
+      Serial.println("On case 3 ");
+      Serial.println("Value of DelOrAdd: ");
+      Serial.println(DelOrAdd);
+      switch (SMSerror) {
+        case 1:
+          trama = "";
           trama = "Number could not be registered. Check message format please";
-					tramaSMS(phonenum, trama); // SMS confirmation
-					break;
-				// deleting error
-				case 2:
-					trama = "";
+          tramaSMS(phonenum, trama); // SMS confirmation
+          break;
+        // deleting error
+        case 2:
+          trama = "";
           trama = "Number could not be deleted. Check message format please";
-					tramaSMS(phonenum, trama); // SMS confirmation
-					break;
-				default:
-				break;
-			}
-			break;
-		default:
-		break;
-	}
+          tramaSMS(phonenum, trama); // SMS confirmation
+          break;
+        default:
+        break;
+      }
+      break;
+    default:
+    break;
+  }
 }
 
 //**********************************************************
@@ -717,13 +722,13 @@ void confirmSMS(int DelOrAdd )
 void tramaSMS(String numbertoSend, String messagetoSend)
 {
   // copy number in arrays
-	strcpy(phone,numbertoSend.c_str());
+  strcpy(phone,numbertoSend.c_str());
 
   // trama into message
-	strcpy(message, messagetoSend.c_str());
+  strcpy(message, messagetoSend.c_str());
 
-	// sms confirmation
-	sendSMS(phone, message);
+  // sms confirmation
+  sendSMS(phone, message);
 }
 
 //**********************************************************
@@ -732,8 +737,8 @@ void tramaSMS(String numbertoSend, String messagetoSend)
 
 void getTemperatureSMS()
 {   
-
-		// measure temperature
+    // checks if number is whithin 5 first positions in sim
+    // measure temperature
     float temperature = getTemperature();
     temperatureString = "";
     temperatureString = String(getTemperature());
@@ -741,15 +746,16 @@ void getTemperatureSMS()
     // Serial.println(temperatureString);
     trama = "";
     trama = "Temperature value is: " + temperatureString + " Celsius degrees";
-		tramaSMS(phonenum, trama);
+    tramaSMS(phonenum, trama);
+  
 }
 
 //**********************************************************
-
 // function that gets humidity from DHT11 and sends sms
 void getHumiditySMS()
 {
-		// measure humidity
+      // checks if number is whithin 5 first positions in sim
+    // measure humidity
     float humidity = getHumidity();
     humidityString = "";
     humidityString = String(getHumidity());
@@ -757,5 +763,6 @@ void getHumiditySMS()
     // Serial.println(humidityString);
     trama = "";
     trama = "Humidity value is: " + humidityString + " Percentage";
-		tramaSMS(phonenum, trama);
+    tramaSMS(phonenum, trama);
+  
 }
