@@ -732,15 +732,7 @@ void tramaSMS(String numbertoSend, String messagetoSend)
 
 void getTemperatureSMS()
 {   
-    // checks if number is whithin 5 first positions in sim
-	if (!isAuthorized)
-    {
-		Serial.println(j);
-		// Serial.println("No autorizado para consultar temperatura");
-    Serial.println("No authorized to check temperature");
-    }
-	else
-	{
+
 		// measure temperature
     float temperature = getTemperature();
     temperatureString = "";
@@ -750,7 +742,6 @@ void getTemperatureSMS()
     trama = "";
     trama = "Temperature value is: " + temperatureString + " Celsius degrees";
 		tramaSMS(phonenum, trama);
-	}
 }
 
 //**********************************************************
@@ -758,15 +749,6 @@ void getTemperatureSMS()
 // function that gets humidity from DHT11 and sends sms
 void getHumiditySMS()
 {
-      // checks if number is whithin 5 first positions in sim
-	if (!isAuthorized)
-    {
-		Serial.println(j);
-		// Serial.println("No autorizado para consultar temperatura");
-    Serial.println("No authorized to check humidity");
-    }
-	else
-	{
 		// measure humidity
     float humidity = getHumidity();
     humidityString = "";
@@ -776,5 +758,4 @@ void getHumiditySMS()
     trama = "";
     trama = "Humidity value is: " + humidityString + " Percentage";
 		tramaSMS(phonenum, trama);
-	}
 }
