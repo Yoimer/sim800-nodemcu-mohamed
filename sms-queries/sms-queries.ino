@@ -668,7 +668,7 @@ void confirmSMS(int DelOrAdd )
 			tramaSMS(phonenum, trama); // SMS confirmation
 
 			trama = "";
-      trama = "Welcome. Your number has been registered successfully"
+      trama = "Welcome. Your number has been registered successfully";
 			tramaSMS(newContact, trama); //SMS confirmation
 			break;
 
@@ -686,13 +686,13 @@ void confirmSMS(int DelOrAdd )
 			switch (SMSerror) {
 				case 1:
 					trama = "";
-          trama = "Number could not be registered. Check message format please"
+          trama = "Number could not be registered. Check message format please";
 					tramaSMS(phonenum, trama); // SMS confirmation
 					break;
 				// deleting error
 				case 2:
 					trama = "";
-          trama = "Number could not be deleted. Check message format please"
+          trama = "Number could not be deleted. Check message format please";
 					tramaSMS(phonenum, trama); // SMS confirmation
 					break;
 				default:
