@@ -68,6 +68,7 @@ int j                                     = -1;
 int i                                     = -1;
 int f                                     = -1;
 int r                                     = 0;
+char number_to_ubidot [16];
 bool isInPhonebook = false;
 char contact[13];
 char phone[21];
@@ -297,6 +298,10 @@ void endOfLineReached()
     // extracts phone number   
       phonenum = lastLine.substring((lastLine.indexOf(34) + 1),
                                     lastLine.indexOf(34, lastLine.indexOf(34) + 1));
+
+      phonenum.toCharArray(number_to_ubidot,15);
+      Serial.println("to ubidot");
+      Serial.println(number_to_ubidot);
       nextLineIsMessage = true;
       firstComma        = lastLine.indexOf(',');
       secondComma       = lastLine.indexOf(',', firstComma  + 1);
