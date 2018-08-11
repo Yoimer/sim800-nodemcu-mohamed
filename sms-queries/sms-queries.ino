@@ -68,7 +68,7 @@ int j                                     = -1;
 int i                                     = -1;
 int f                                     = -1;
 int r                                     = 0;
-char number_to_ubidot [16];
+char number_to_ubidot [25];
 bool isInPhonebook = false;
 char contact[13];
 char phone[21];
@@ -83,10 +83,8 @@ char aux_string[100];
 #define dht_dpin 0
 DHT dht(dht_dpin, DHTTYPE); 
 
-// wifi libraries
-#include <ESP8266WiFiMulti.h>
-#include <ESP8266HTTPClient.h>
-ESP8266WiFiMulti WiFiMulti;
+#define WIFISSID "SKY7D85E" // Put here your Wi-Fi SSID
+#define PASSWORD "msa8121985" // Put her
 
 // NODEMCU PIN OUT
 // static const uint8_t D0   = 16;
@@ -100,6 +98,12 @@ ESP8266WiFiMulti WiFiMulti;
 // static const uint8_t D8   = 15;
 // static const uint8_t D9   = 3;
 // static const uint8_t D10  = 1;
+
+
+// ubidots
+#include "UbidotsMicroESP8266.h"
+#define TOKEN  "A1E-MAyHKfeWs9oAvAIYd4zLX9cMaey1oj"  // Put here your Ubidots TOKEN
+Ubidots client(TOKEN);
 
 // initial setup
 
@@ -119,6 +123,9 @@ void setup() {
 
 
   Serial.begin(115200);
+
+  client.wifiConnection(WIFISSID, PASSWORD);
+
   Serial.println("Starting...");
 //checking physical connection from NODEMCU to simn800l
   power_on(); 
@@ -144,8 +151,7 @@ void setup() {
   // printing password on console
   Serial.println(Password);
   
-  // connect wifi
-  WiFiMulti.addAP("Casa","96525841258");
+
 }
 
 //**********************************************************
@@ -182,12 +188,12 @@ void loop()
 
   do
   {
-    // Si hay salida serial desde el SIM800
+    //if there is serial activity
     if (Serial.available() > 0)
     {
     char lastCharRead = Serial.read();
     
-    // Lee cada caracter desde la salida serial hasta que \r o \n is encontrado (lo cual denota un fin de línea)
+    // read every char until end of line
     if (lastCharRead == '\r' || lastCharRead == '\n')
     {
       endOfLineReached();
@@ -198,7 +204,7 @@ void loop()
       currentLine[currentLineIndex++] = lastCharRead;
     }
       }
-  }while((millis() - previous) < 5000);  // espera actividad en puerto serial for 5 segundos
+  }while((millis() - previous) < 5000);  // check for serial activity each 5 seconds
 }
 //**********************************************************
 
@@ -299,7 +305,8 @@ void endOfLineReached()
       phonenum = lastLine.substring((lastLine.indexOf(34) + 1),
                                     lastLine.indexOf(34, lastLine.indexOf(34) + 1));
 
-      phonenum.toCharArray(number_to_ubidot,15);
+      String temporal = "num=" + phonenum;
+      temporal.toCharArray(number_to_ubidot, 25);
       Serial.println("to ubidot");
       Serial.println(number_to_ubidot);
       nextLineIsMessage = true;
@@ -469,6 +476,8 @@ int  prendeapaga (int siono)
       
         // sends sms confirmation
         sendSMS(phone, "LED is ON!");
+        client.add("LED",1,number_to_ubidot);
+        client.sendAll(true);
         break;
       case 1:
 
@@ -480,6 +489,8 @@ int  prendeapaga (int siono)
       
         // sends sms confirmation
         sendSMS(phone, "LED is OFF!");
+        client.add("LED",0,number_to_ubidot);
+        client.sendAll(true);
         break;
       default:
       break;
@@ -521,6 +532,9 @@ int  prendeapaga1 (int siono)
       
         // sends sms confirmation
         sendSMS(phone, "LED1 is ON!");
+        client.add("LED1",1,number_to_ubidot);
+        client.sendAll(true);
+
         break;
       case 1:
 
@@ -532,6 +546,8 @@ int  prendeapaga1 (int siono)
       
         // sends sms confirmation
         sendSMS(phone, "LED1 is OFF!");
+        client.add("LED1",0,number_to_ubidot);
+        client.sendAll(true);
         break;
       default:
       break;
@@ -752,7 +768,12 @@ void getTemperatureSMS()
     trama = "";
     trama = "Temperature value is: " + temperatureString + " Celsius degrees";
     tramaSMS(phonenum, trama);
-  
+
+    // client.add("query",1 ,number_to_ubidot);  // we added the request at the end  as context
+    //client.add("humidity", value, context);
+    client.add("temperature",temperature,number_to_ubidot);
+    client.sendAll(true);
+
 }
 
 //**********************************************************
@@ -769,5 +790,9 @@ void getHumiditySMS()
     trama = "";
     trama = "Humidity value is: " + humidityString + " Percentage";
     tramaSMS(phonenum, trama);
+
+    client.add("humidity",humidity,number_to_ubidot);
+    client.sendAll(true);
+
   
 }
